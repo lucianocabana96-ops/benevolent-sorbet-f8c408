@@ -1,33 +1,36 @@
-const CACHE = 'extasis-pos-v1';
-const SHELL  = ['/', '/index.html'];
+const CACHE = 'extasis-v5'; /* ← cambiado fuerza actualización en todos los celulares */
 
-/* Instalar: cachear shell */
-self.addEventListener('install', e => {
+self.addEventListener('install', function(e) {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(function(c) { return c.addAll(['./','./index.html']); })
+      .then(function() { return self.skipWaiting(); }) /* activa inmediato */
   );
 });
 
-/* Activar: limpiar caches viejas */
-self.addEventListener('activate', e => {
+self.addEventListener('activate', function(e) {
   e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE; })
+            .map(function(k) { return caches.delete(k); }) /* borra caché viejo */
+      );
+    }).then(function() { return self.clients.claim(); }) /* toma control inmediato */
   );
 });
 
-/* Fetch: cache-first → network → fallback */
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+self.addEventListener('fetch', function(e) {
+  /* Network first: intenta red, si falla usa caché */
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      });
-    }).catch(() => caches.match('/'))
+    fetch(e.request)
+      .then(function(resp) {
+        /* Actualizar caché con la versión nueva */
+        var clone = resp.clone();
+        caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
+        return resp;
+      })
+      .catch(function() {
+        return caches.match(e.request);
+      })
   );
 });

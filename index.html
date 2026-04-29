@@ -2508,6 +2508,11 @@ select.inp { cursor: pointer; }
   #catalog-print-overlay { display: block !important; position: static; }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.3); }
+}
+
 </style>
 </head>
 <body>
@@ -2554,6 +2559,7 @@ select.inp { cursor: pointer; }
       <button class="tab-btn" data-tab="inventario" onclick="switchTab('inventario',this)">Inventario</button>
       <button class="tab-btn" data-tab="caja"       onclick="switchTab('caja',this)">Caja</button>
       <button class="tab-btn" data-tab="reportes"   onclick="switchTab('reportes',this)">Reportes</button>
+      <button class="tab-btn" data-tab="terminal2"  onclick="switchTab('terminal2',this)">🔔 Terminal 2</button>
     </nav>
     <div class="toggle-wrap">
       <span class="toggle-ico">☀️</span>
@@ -2692,6 +2698,9 @@ select.inp { cursor: pointer; }
     <!-- ══════ REPORTES ══════ -->
     <section id="tab-reportes" class="flex col h-full ov-auto hidden">
       <div id="reportes-content"></div>
+    </section>
+    <section id="tab-terminal2" class="flex col h-full ov-auto hidden">
+      <div id="terminal2-content"></div>
     </section>
 
   </div>
@@ -2852,7 +2861,10 @@ function subscribeRealtime() {
           S.sales.unshift(newSale);
           lsW("ex2_sales", S.sales);
           renderAll();
-          toast("🔔 Nueva venta desde terminal secundaria: " + fmt(newSale.total), "ok");
+          // Si el tab Terminal 2 está activo, refrescarlo
+          var t2tab = document.getElementById("tab-terminal2");
+          if (t2tab && !t2tab.classList.contains("hidden")) renderTerminal2();
+          toast("🔔 Nueva venta T2: " + fmt(newSale.total), "ok");
         }
       })
       .subscribe();
@@ -2970,7 +2982,9 @@ function save() {
 /* ══════════════════════════════════════
    CALCULATIONS
 ══════════════════════════════════════ */
-function todaySales() { return S.sales.filter(s => s.date === mkToday()); }
+function todaySales()      { return S.sales.filter(s => s.date === mkToday() && (s.terminal||"principal") === "principal"); }
+function todaySalesT2()    { return S.sales.filter(s => s.date === mkToday() && s.terminal === "secundaria"); }
+function todaySalesAll()   { return S.sales.filter(s => s.date === mkToday()); }
 
 function monthSales() {
   const now = new Date(); const m = now.getMonth(); const y = now.getFullYear();
@@ -3095,6 +3109,7 @@ function switchTab(tab, btn) {
   if (tab === "inventario") renderInventario();
   if (tab === "caja")       renderCaja();
   if (tab === "reportes")   renderReportes();
+  if (tab === "terminal2")  renderTerminal2();
 }
 
 function goVentas() {
@@ -3889,6 +3904,106 @@ function renderReportes() {
 }
 
 /* ─── Helpers de reportes por rango ─── */
+
+/* ══════════════════════════════════════
+   TERMINAL 2 — Vista en tiempo real
+══════════════════════════════════════ */
+function renderTerminal2() {
+  var today = mkToday();
+  var t2sales = S.sales.filter(function(s){ return s.terminal === "secundaria"; });
+  var t2today = t2sales.filter(function(s){ return s.date === today; });
+
+  var totalHoy    = t2today.reduce(function(a,s){ return a+s.total; },0);
+  var totalTransf = t2today.filter(function(s){ return s.method==="Transferencia"; }).reduce(function(a,s){ return a+s.total; },0);
+  var totalDeb    = t2today.filter(function(s){ return s.method==="Débito"; }).reduce(function(a,s){ return a+s.total; },0);
+  var totalCred   = t2today.filter(function(s){ return s.method==="Crédito"; }).reduce(function(a,s){ return a+s.total; },0);
+  var totalEfect  = totalHoy - totalTransf - totalDeb - totalCred;
+
+  var MSTYLE = {
+    "Efectivo":     { bg:"var(--ok-bg)",  txt:"var(--ok)",     bd:"var(--ok-bd)"  },
+    "Transferencia":{ bg:"rgba(21,101,192,.1)", txt:"var(--blue)", bd:"rgba(21,101,192,.3)" },
+    "Débito":       { bg:"var(--pur-bg)", txt:"var(--purple)", bd:"var(--pur-bd)" },
+    "Crédito":      { bg:"rgba(255,152,0,.12)", txt:"#e65100",  bd:"rgba(255,152,0,.35)" },
+    "Mixto":        { bg:"var(--bg3)",    txt:"var(--txt3)",   bd:"var(--bd2)"    },
+  };
+
+  var html = '<div class="dash-wrap">';
+
+  // Header
+  html += '<div class="dash-header" style="justify-content:space-between;">' +
+    '<h2 class="dash-title">🔔 Terminal 2 — Tiempo Real</h2>' +
+    '<span id="t2-live-dot" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);">' +
+      '<span style="width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 1.5s infinite;display:inline-block;"></span>' +
+      'EN VIVO' +
+    '</span>' +
+  '</div>';
+
+  // KPIs
+  html += '<div class="kpi-grid" style="margin-bottom:16px;">';
+  html += '<div class="kpi-card"><div class="kpi-ico">💰</div><div><div class="kpi-lbl">Efectivo T2</div><div class="kpi-val">' + fmt(totalEfect) + '</div></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-ico">💵</div><div><div class="kpi-lbl">Total ventas T2</div><div class="kpi-val">' + fmt(totalHoy) + '</div></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-ico">📲</div><div><div class="kpi-lbl">Transferencia</div><div class="kpi-val">' + fmt(totalTransf) + '</div></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-ico">💳</div><div><div class="kpi-lbl">Débito</div><div class="kpi-val">' + fmt(totalDeb) + '</div></div></div>';
+  html += '<div class="kpi-card" style="border:1px solid rgba(255,152,0,.4);"><div class="kpi-ico">🏦</div><div><div class="kpi-lbl" style="color:#e65100;">Crédito</div><div class="kpi-val" style="color:#e65100;">' + fmt(totalCred) + '</div></div></div>';
+  html += '<div class="kpi-card"><div class="kpi-ico">🧾</div><div><div class="kpi-lbl">Transacciones</div><div class="kpi-val">' + t2today.length + '</div></div></div>';
+  html += '</div>';
+
+  // COMPARATIVA: T1 vs T2
+  var t1today = todaySales();
+  var t1total = t1today.reduce(function(a,s){ return a+s.total; },0);
+  var totalCombinado = t1total + totalHoy;
+
+  html += '<div class="dash-card" style="margin-bottom:16px;">';
+  html += '<div class="dash-card-hdr"><span class="dash-card-ttl">📊 Comparativa del día</span></div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 0;">';
+  html += '<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:12px;border:1px solid var(--bd);">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--txt3);letter-spacing:.06em;margin-bottom:4px;">NEGOCIO 1</div>' +
+    '<div style="font-size:22px;font-weight:900;color:var(--ac);">' + fmt(t1total) + '</div>' +
+    '<div style="font-size:11px;color:var(--txt3);">' + t1today.length + ' ventas</div>' +
+  '</div>';
+  html += '<div style="text-align:center;padding:12px;background:var(--bg2);border-radius:12px;border:1px solid var(--ok-bd);">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--txt3);letter-spacing:.06em;margin-bottom:4px;">NEGOCIO 2</div>' +
+    '<div style="font-size:22px;font-weight:900;color:var(--ok);">' + fmt(totalHoy) + '</div>' +
+    '<div style="font-size:11px;color:var(--txt3);">' + t2today.length + ' ventas</div>' +
+  '</div>';
+  html += '</div>';
+  html += '<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:10px;margin-top:4px;">' +
+    '<div style="font-size:11px;color:var(--txt3);">TOTAL COMBINADO</div>' +
+    '<div style="font-size:24px;font-weight:900;color:var(--txt);">' + fmt(totalCombinado) + '</div>' +
+  '</div>';
+  html += '</div>';
+
+  // Ventas T2 del día
+  html += '<div class="dash-card">';
+  html += '<div class="dash-card-hdr"><span class="dash-card-ttl">Ventas de Terminal 2 — Hoy</span></div>';
+
+  if (t2today.length === 0) {
+    html += '<div class="empty" style="padding:24px;"><div class="empty-sub">Sin ventas en Terminal 2 hoy</div></div>';
+  } else {
+    html += '<table class="inv-table"><thead><tr>' +
+      '<th>Hora</th><th>Productos</th><th>Método</th><th style="text-align:right;">Total</th>' +
+    '</tr></thead><tbody>';
+    t2today.forEach(function(s) {
+      var ms = MSTYLE[s.method] || MSTYLE["Mixto"];
+      var cuotas = s.creditoCuotas > 1 ? " " + s.creditoCuotas + "x" : "";
+      html += '<tr>' +
+        '<td style="color:var(--txt3);font-size:12px;">' + s.time + '</td>' +
+        '<td style="font-size:12px;">' + (s.items||[]).map(function(i){return i.name;}).join(", ") + '</td>' +
+        '<td><span class="badge" style="background:' + ms.bg + ';color:' + ms.txt + ';border:1px solid ' + ms.bd + ';">' + s.method + cuotas + '</span></td>' +
+        '<td style="font-weight:700;text-align:right;">' + fmt(s.total) + '</td>' +
+      '</tr>';
+    });
+    html += '<tr style="border-top:2px solid var(--bd);">' +
+      '<td colspan="3" style="font-weight:700;padding-top:10px;">TOTAL T2</td>' +
+      '<td style="font-weight:800;text-align:right;font-size:15px;color:var(--ac);padding-top:10px;">' + fmt(totalHoy) + '</td>' +
+    '</tr>';
+    html += '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  document.getElementById("terminal2-content").innerHTML = html;
+}
+
 function printReport() {
   toast("Preparando PDF...", "ok");
   setTimeout(function(){ window.print(); }, 400);
