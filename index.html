@@ -2982,10 +2982,23 @@ async function syncFromCloud() {
       supaGET("ex_sales", "select=*&order=id.desc&limit=1000"),
       supaGET("ex_expenses", "select=*&order=id.desc&limit=500")
     ]);
-    if (prods && prods.length) {
-      S.products = prods.map(rowToProd);
-      lsW("ex2_prods", S.products);
+
+    /* ── Productos: solo pisar si la nube tiene MÁS o los mismos ──
+       Esto evita que la nube borre importaciones recientes que aún no se sincronizaron */
+    if (prods && prods.length > 0) {
+      if (prods.length >= S.products.length) {
+        S.products = prods.map(rowToProd);
+        lsW("ex2_prods", S.products);
+      } else {
+        /* La nube tiene menos productos: subir los locales a la nube */
+        console.warn("Nube tiene menos productos (" + prods.length + ") que local (" + S.products.length + ") — subiendo locales");
+        pushProductsToCloud();
+      }
+    } else if (S.products.length > 0) {
+      /* Nube vacía pero hay productos locales — subirlos */
+      pushProductsToCloud();
     }
+
     if (sales && sales.length) {
       S.sales = sales.map(rowToSale);
       lsW("ex2_sales", S.sales);
@@ -4610,7 +4623,9 @@ function confirmImport() {
   _importPending = [];
   closeModal();
   renderProductos();
-  toast(count + " producto" + (count!==1?"s":"") + " importados correctamente", "ok");
+  toast(count + " producto" + (count!==1?"s":"") + " importados correctamente ☁️", "ok");
+  /* Sincronizar con Supabase */
+  pushProductsToCloud();
 }
 
 /* ══════════════════════════════════════
