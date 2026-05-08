@@ -2977,28 +2977,29 @@ function rowToProd(r) {
 /* ─── Sincronizar desde la nube al arrancar ─── */
 async function syncFromCloud() {
   try {
-    var [prods, sales, exps] = await Promise.all([
-      supaGET("ex_products"),
+    /* ── PRODUCTOS: NUNCA se descargan de la nube si ya hay locales ──
+       Los productos son master en este dispositivo (app principal).
+       Solo se descargan si el localStorage está vacío (primer uso).
+       Siempre se SUBEN los locales para mantener la nube actualizada. */
+    if (S.products.length === 0) {
+      var prods = await supaGET("ex_products");
+      if (prods && prods.length) {
+        S.products = prods.map(rowToProd);
+        lsW("ex2_prods", S.products);
+        console.log("✓ Productos bajados de nube (primer uso): " + prods.length);
+      }
+    } else {
+      /* Hay productos locales → subirlos a la nube para mantenerla sync */
+      pushProductsToCloud();
+      console.log("✓ Productos locales: " + S.products.length + " (subiendo a nube)");
+    }
+
+    /* ── VENTAS Y GASTOS: sí se sincronizan desde la nube ──
+       Porque pueden venir de la terminal secundaria */
+    var [sales, exps] = await Promise.all([
       supaGET("ex_sales", "select=*&order=id.desc&limit=1000"),
       supaGET("ex_expenses", "select=*&order=id.desc&limit=500")
     ]);
-
-    /* ── Productos: solo pisar si la nube tiene MÁS o los mismos ──
-       Esto evita que la nube borre importaciones recientes que aún no se sincronizaron */
-    if (prods && prods.length > 0) {
-      if (prods.length >= S.products.length) {
-        S.products = prods.map(rowToProd);
-        lsW("ex2_prods", S.products);
-      } else {
-        /* La nube tiene menos productos: subir los locales a la nube */
-        console.warn("Nube tiene menos productos (" + prods.length + ") que local (" + S.products.length + ") — subiendo locales");
-        pushProductsToCloud();
-      }
-    } else if (S.products.length > 0) {
-      /* Nube vacía pero hay productos locales — subirlos */
-      pushProductsToCloud();
-    }
-
     if (sales && sales.length) {
       S.sales = sales.map(rowToSale);
       lsW("ex2_sales", S.sales);
@@ -3008,7 +3009,7 @@ async function syncFromCloud() {
       lsW("ex2_expenses", S.expenses);
     }
     renderAll();
-    console.log("✓ Sync cloud→local: prods=" + (prods&&prods.length) + " sales=" + (sales&&sales.length));
+    console.log("✓ Sync ventas=" + (sales&&sales.length) + " gastos=" + (exps&&exps.length));
   } catch(e) {
     console.warn("syncFromCloud error:", e);
   }
