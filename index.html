@@ -2977,25 +2977,17 @@ function rowToProd(r) {
 /* ─── Sincronizar desde la nube al arrancar ─── */
 async function syncFromCloud() {
   try {
-    /* ── PRODUCTOS: NUNCA se descargan de la nube si ya hay locales ──
-       Los productos son master en este dispositivo (app principal).
-       Solo se descargan si el localStorage está vacío (primer uso).
-       Siempre se SUBEN los locales para mantener la nube actualizada. */
-    if (S.products.length === 0) {
-      var prods = await supaGET("ex_products");
-      if (prods && prods.length) {
-        S.products = prods.map(rowToProd);
-        lsW("ex2_prods", S.products);
-        console.log("✓ Productos bajados de nube (primer uso): " + prods.length);
-      }
-    } else {
-      /* Hay productos locales → subirlos a la nube para mantenerla sync */
-      pushProductsToCloud();
-      console.log("✓ Productos locales: " + S.products.length + " (subiendo a nube)");
+    /* ══ PRODUCTOS ══
+       La app PRINCIPAL es el master absoluto de productos.
+       NUNCA se descargan productos de Supabase — solo se suben.
+       Así se evita que una sesión anterior o la terminal 2 pisen el catálogo. */
+    if (S.products.length > 0) {
+      pushProductsToCloud(); /* mantener nube actualizada */
     }
+    console.log("✓ Productos locales: " + S.products.length);
 
-    /* ── VENTAS Y GASTOS: sí se sincronizan desde la nube ──
-       Porque pueden venir de la terminal secundaria */
+    /* ══ VENTAS Y GASTOS ══
+       Sí se sincronizan desde la nube porque vienen de múltiples terminales */
     var [sales, exps] = await Promise.all([
       supaGET("ex_sales", "select=*&order=id.desc&limit=1000"),
       supaGET("ex_expenses", "select=*&order=id.desc&limit=500")
