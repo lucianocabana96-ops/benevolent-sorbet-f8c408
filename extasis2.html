@@ -636,7 +636,7 @@ function renderVentas() {
   var cp = document.getElementById("credito-panel");
   if (S.method === "Crédito") {
     cp.style.display = "block";
-    document.getElementById("cuotas-grid").innerHTML = [1,3,6,12].map(function(n) {
+    document.getElementById("cuotas-grid").innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(function(n) {
       return '<button class="cuota-btn ' + (S.creditoCuotas===n?"active":"") + '" onclick="setCuotas(' + n + ')">' + n + 'x</button>';
     }).join('');
     if (S.creditoCuotas > 1) {
