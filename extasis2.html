@@ -680,7 +680,7 @@ async function confirmarVenta() {
 /* ── CATÁLOGO ── */
 function renderCatalogo() {
   var q = (document.getElementById("cat-search").value||"").toLowerCase();
-  var generos = ["Todos","Hombre","Mujer","Accesorios"];
+  var generos = ["Todos","Hombre","Mujer","Accesorios Hombre","Accesorios Mujer"];
   document.getElementById("cat-filters").innerHTML = generos.map(function(g) {
     return '<button class="filter-chip ' + (S.filter===g?"active":"") + '" onclick="setFilter(\'' + g + '\')">' + g + '</button>';
   }).join('');
@@ -691,7 +691,7 @@ function renderCatalogo() {
     return true;
   });
 
-  var BADGE = { Hombre:"H", Mujer:"M", Accesorios:"A" };
+  var BADGE = { Hombre:"H", Mujer:"M", "Accesorios Hombre":"AH", "Accesorios Mujer":"AM" };
   document.getElementById("prod-list").innerHTML = prods.length ?
     prods.map(function(p) {
       var b = BADGE[p.nombre]||"A";

@@ -2652,6 +2652,7 @@ select.inp { cursor: pointer; }
 .g-m { background: #fce4ec !important; color: #c2185b !important; border: 1px solid #f8bbd0 !important; }
 .g-u { background: var(--pur-bg) !important; color: var(--purple) !important; border: 1px solid var(--pur-bd) !important; }
 .g-a { background: var(--pur-bg) !important; color: var(--purple) !important; border: 1px solid var(--pur-bd) !important; }
+.g-a { background: var(--pur-bg) !important; color: var(--purple) !important; border: 1px solid var(--pur-bd) !important; }
 
 /* ── Mejor separación en la caja diaria ── */
 .pos-stat-pill.danger .psp-val { color: var(--err) !important; }
@@ -2988,7 +2989,7 @@ function rowToExp(r) {
 }
 function prodToRow(p) {
   return { id: p.id, producto: p.producto||p.name||"",
-            nombre: p.nombre||"Accesorios", categoria: p.categoria||"",
+            nombre: p.nombre||"Accesorios Hombre", categoria: p.categoria||"",
             subcategoria: p.subcategoria||"", precio: p.precio||0 };
 }
 function rowToProd(r) {
@@ -3095,11 +3096,12 @@ const METHOD_STYLE = {
 const CAT_STYLE = {
   "Hombre": { bg:"var(--blue-bg)", txt:"var(--blue)",  bd:"var(--blue-bd)" },
   "Mujer":  { bg:"var(--pur-bg)",  txt:"var(--purple)",bd:"var(--pur-bd)"  },
-  "Accesorios": { bg:"var(--ok-bg)",   txt:"var(--ok)",    bd:"var(--ok-bd)"   },
+  "Accesorios Hombre": { bg:"var(--ok-bg)", txt:"var(--ok)", bd:"var(--ok-bd)" },
+  "Accesorios Mujer":  { bg:"var(--ok-bg)", txt:"var(--ok)", bd:"var(--ok-bd)" },
 };
 
-const CAT_ICONS = { "Todos":"🏷️", "Hombre":"👔", "Mujer":"👗", "Accesorios":"👜" };
-const CAT_PROD_ICONS = { "Hombre":"👔", "Mujer":"👗", "Accesorios":"👜" };
+const CAT_ICONS = { "Todos":"🏷️", "Hombre":"👔", "Mujer":"👗", "Accesorios Hombre":"🎩", "Accesorios Mujer":"👜" };
+const CAT_PROD_ICONS = { "Hombre":"👔", "Mujer":"👗", "Accesorios Hombre":"🎩", "Accesorios Mujer":"👜" };
 
 const INIT_CATEGORIAS = ["Jeans","Remeras","Pantalones","Buzos","Camperas","Calzas","Vestidos","Blusas","Shorts","Accesorios"];
 const INIT_SUBCATEGORIAS = {};
@@ -3138,7 +3140,7 @@ function migrateProducts(prods) {
       return {
         id:          p.id,
         producto:    p.name    || p.producto    || "",
-        nombre:      p.cat === "Dama" ? "Mujer" : (p.cat || p.nombre || "Accesorios"),
+        nombre:      p.cat === "Dama" ? "Mujer" : (p.cat || p.nombre || "Accesorios Hombre"),
         categoria:   p.sub    || p.categoria   || "",
         subcategoria: p.subcategoria || "",
         precio:      p.price  || p.precio      || 0,
@@ -3737,10 +3739,11 @@ function autoMixto(key) {
    RENDER: PRODUCTOS V2 — POS LIST
 ══════════════════════════════════════ */
 const GENDER_DATA = [
-  { key:"Todos",  ico:"🏷️", lbl:"Todos"  },
-  { key:"Hombre", ico:"👔", lbl:"Hombre" },
-  { key:"Mujer",  ico:"👗", lbl:"Mujeres" },
-  { key:"Accesorios", ico:"👜", lbl:"Accesorios" },
+  { key:"Todos",              ico:"🏷️", lbl:"Todos"          },
+  { key:"Hombre",             ico:"👔", lbl:"Hombre"          },
+  { key:"Mujer",              ico:"👗", lbl:"Mujeres"          },
+  { key:"Accesorios Hombre",  ico:"🎩", lbl:"Acces. Hombre"   },
+  { key:"Accesorios Mujer",   ico:"👜", lbl:"Acces. Mujer"    },
 ];
 
 function renderProductos() {
@@ -3757,7 +3760,8 @@ function renderGenderCol() {
     Todos:  '<span class="g-badge g-a">ALL</span>',
     Hombre: '<span class="g-badge g-h">H</span>',
     Mujer:  '<span class="g-badge g-m">M</span>',
-    Accesorios: '<span class="g-badge g-u">A</span>',
+    "Accesorios Hombre": '<span class="g-badge g-u">AH</span>',
+    "Accesorios Mujer":  '<span class="g-badge g-u">AM</span>',
   };
   var html = "";
   for (var i=0; i<GENDER_DATA.length; i++) {
@@ -4480,7 +4484,7 @@ function openProdModal(id) {
   openModal(
     '<div class="modal-hdr"><span class="modal-ttl">' + (p?"Editar producto":"Nuevo producto") + '</span><button class="modal-cls" onclick="closeModal()">✕</button></div>' +
     '<div class="fg"><label class="lbl">Nombre del producto</label><input class="inp" id="p-producto" type="text" placeholder="Ej: Remera Premium" value="' + (p?p.producto:"") + '"></div>' +
-    '<div class="fg"><label class="lbl">Género</label><select class="inp" id="p-nombre"><option value="Hombre" ' + (selNombre==="Hombre"?"selected":"") + '>Hombre</option><option value="Mujer" ' + (selNombre==="Mujer"?"selected":"") + '>Mujer</option><option value="Accesorios" ' + (selNombre==="Accesorios"?"selected":"") + '>Accesorios</option></select></div>' +
+    '<div class="fg"><label class="lbl">Género</label><select class="inp" id="p-nombre"><option value="Hombre" ' + (selNombre==="Hombre"?"selected":"") + '>Hombre</option><option value="Mujer" ' + (selNombre==="Mujer"?"selected":"") + '>Mujer</option><option value="Accesorios Hombre" ' + (selNombre==="Accesorios Hombre"?"selected":"") + '>Accesorios Hombre</option><option value="Accesorios Mujer" ' + (selNombre==="Accesorios Mujer"?"selected":"") + '>Accesorios Mujer</option></select></div>' +
     '<div class="fg"><label class="lbl">Categoría (tipo de prenda)</label><div style="display:flex;gap:6px;">' +
       '<select class="inp flex-1" id="p-categoria" onchange="onModalCatChange()">' + getCategoriasOpts(selCat) + '</select>' +
       '<button type="button" class="btn btn-surface btn-sm" onclick="openInlineCategoria()" style="flex-shrink:0;white-space:nowrap;">+ Nueva</button>' +
@@ -4669,7 +4673,7 @@ function openImportModal() {
       '<div class="import-format-ttl">Formato CSV requerido</div>' +
       '<code class="import-format-code">nombre,categoria,subcategoria,producto,precio<br>Hombre,Jeans,RIMO,Jean Slim 2024,35000<br>Mujer,Vestidos,YD,Vestido Floral,28000</code>' +
     '</div>' +
-    '<div style="font-size:11px;color:var(--txt3);margin-bottom:12px;">Género válidos: <strong>Hombre, Mujer, Accesorios</strong>  ·  También acepta JSON</div>' +
+    '<div style="font-size:11px;color:var(--txt3);margin-bottom:12px;">Género válidos: <strong>Hombre, Mujer, Accesorios Hombre, Accesorios Mujer</strong>  ·  También acepta JSON</div>' +
     '<div class="fg"><label class="lbl">Seleccioná el archivo</label><input class="inp" type="file" id="import-file" accept=".csv,.json" onchange="previewImport(this)"></div>' +
     '<div id="import-preview" style="display:none;max-height:200px;overflow:auto;margin-top:12px;border:1.5px solid var(--bd);border-radius:var(--rs);overflow:hidden;"></div>' +
     '<div class="modal-acts"><button class="btn btn-surface" onclick="closeModal()">Cancelar</button><button class="btn btn-primary hidden" id="import-confirm-btn" onclick="confirmImport()">✓ Confirmar importación</button></div>'
@@ -4706,7 +4710,7 @@ function previewImport(input) {
       var producto    = (row.producto||row.product||row.nombre_producto||"").trim();
       var precio      = parseFloat(row.precio||row.price||0);
       if (!nombre)   { errors.push("Fila "+(i+2)+": género (nombre) vacío"); return; }
-      if (!["Hombre","Mujer","Accesorios"].includes(nombre)) { errors.push("Fila "+(i+2)+": género inválido \""+nombre+"\""); return; }
+      if (!["Hombre","Mujer","Accesorios Hombre","Accesorios Mujer"].includes(nombre)) { errors.push("Fila "+(i+2)+": género inválido \""+nombre+"\""); return; }
       if (!producto)  { errors.push("Fila "+(i+2)+": producto vacío"); return; }
       if (precio < 0) { errors.push("Fila "+(i+2)+": precio inválido"); return; }
       var isDup = S.products.some(function(p){return (p.producto||p.name||'').toLowerCase()===producto.toLowerCase();});
@@ -4983,7 +4987,8 @@ function renderFilterDrawer() {
       {key:'Todos',  cls:'g-a', lbl:'Todos',  badge:'ALL'},
       {key:'Hombre', cls:'g-h', lbl:'Hombre', badge:'H'},
       {key:'Mujer',  cls:'g-m', lbl:'Mujer',  badge:'M'},
-      {key:'Accesorios', cls:'g-u', lbl:'Accesorios', badge:'A'}
+      {key:'Accesorios Hombre', cls:'g-u', lbl:'Acces. Hombre', badge:'AH'},
+      {key:'Accesorios Mujer',  cls:'g-u', lbl:'Acces. Mujer',  badge:'AM'}
     ];
     gEl.innerHTML = gdata.map(function(g) {
       var a = S.catFilter === g.key ? 'active' : '';
@@ -5058,7 +5063,7 @@ function exportCatalogoPDF() {
   // Agrupar por campo 'nombre' (Hombre / Mujer / Accesorios)
   var grupos = {};
   prods.forEach(function(p) {
-    var g = p.nombre || 'Accesorios';
+    var g = p.nombre || 'Accesorios Hombre';
     if (!grupos[g]) grupos[g] = [];
     grupos[g].push(p);
   });
@@ -5070,9 +5075,9 @@ function exportCatalogoPDF() {
   html += '<div style="font-size:11px;color:#999;margin-top:2px;">Catálogo · ' + new Date().toLocaleDateString('es-AR') + '</div>';
   html += '</div>';
 
-  ['Hombre','Mujer','Accesorios'].forEach(function(g) {
+  ['Hombre','Mujer','Accesorios Hombre','Accesorios Mujer'].forEach(function(g) {
     if (!grupos[g] || !grupos[g].length) return;
-    var colorHdr = g === 'Hombre' ? '#1565C0' : g === 'Mujer' ? '#AD1457' : '#4A148C';
+    var colorHdr = g === 'Hombre' ? '#1565C0' : g === 'Mujer' ? '#AD1457' : g === 'Accesorios Hombre' ? '#00695C' : '#6A1B9A';
     html += '<div style="margin-bottom:18px;">';
     html += '<div style="background:' + colorHdr + ';color:#fff;padding:6px 14px;font-weight:700;font-size:13px;border-radius:6px;margin-bottom:8px;">&#128084; ' + g.toUpperCase() + '</div>';
     html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
