@@ -3019,19 +3019,16 @@ async function syncFromCloud() {
     console.log("✓ Productos locales: " + S.products.length);
 
     /* ══ VENTAS Y GASTOS ══
-       Sí se sincronizan desde la nube porque vienen de múltiples terminales */
+       Siempre se pisa con lo que dice Supabase — incluso si está vacío.
+       Así el DELETE en Supabase limpia correctamente la app. */
     var [sales, exps] = await Promise.all([
       supaGET("ex_sales", "select=*&order=id.desc&limit=1000"),
       supaGET("ex_expenses", "select=*&order=id.desc&limit=500")
     ]);
-    if (sales && sales.length) {
-      S.sales = sales.map(rowToSale);
-      lsW("ex2_sales", S.sales);
-    }
-    if (exps && exps.length) {
-      S.expenses = exps.map(rowToExp);
-      lsW("ex2_expenses", S.expenses);
-    }
+    S.sales = (sales || []).map(rowToSale);
+    lsW("ex2_sales", S.sales);
+    S.expenses = (exps || []).map(rowToExp);
+    lsW("ex2_expenses", S.expenses);
     renderAll();
     console.log("✓ Sync ventas=" + (sales&&sales.length) + " gastos=" + (exps&&exps.length));
   } catch(e) {
