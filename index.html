@@ -2844,6 +2844,15 @@ select.inp { cursor: pointer; }
       <div class="prod-search-bar">
         <input class="inp flex-1" type="text" id="search-inp" placeholder="🔍  Buscar producto…" oninput="renderProdTable()" style="max-width:100%;">
         <button class="voice-btn" id="voice-btn-search-inp" onclick="startVoiceSearch('search-inp')" title="Buscar por voz"><span>🎙️</span></button>
+        <select id="sort-select" class="btn btn-surface btn-sm" style="cursor:pointer;padding:6px 8px;font-size:12px;font-weight:600;border:1.5px solid var(--bd2);border-radius:var(--rs);background:var(--bg2);color:var(--txt);max-width:130px;" onchange="setSortBy(this.value)" title="Ordenar productos">
+          <option value="marca">📦 Marca</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+          <option value="precio_asc">💲 Menor precio</option>
+          <option value="precio_desc">💲 Mayor precio</option>
+          <option value="mas_vendidos">🏆 Más vendidos</option>
+          <option value="ultimos">🆕 Últimos agregados</option>
+        </select>
         <button id="prod-filter-btn" class="btn btn-surface btn-sm" onclick="openFilterPanel()" title="Filtrar">
           🎚 Filtrar
           <span class="filter-dot" id="filter-dot"></span>
@@ -3166,6 +3175,7 @@ const S = {
   mixtoDistrib:  { efectivo:0, transferencia:0, debito:0, credito:0 },
   creditoCuotas: 1,
   catFilter:     "Todos",
+  sortBy:        "marca",
   subFilter:     "Todas",
   subcatFilter:  "Todas",
   dark:          ls("ex2_dark", false),
@@ -3746,11 +3756,19 @@ const GENDER_DATA = [
   { key:"Accesorios Mujer",   ico:"👜", lbl:"Acces. Mujer"    },
 ];
 
+function setSortBy(val) {
+  S.sortBy = val;
+  renderProdTable();
+}
+
 function renderProductos() {
   renderGenderCol();
   renderCatFilterRow();
   renderProdTable();
   updateTrashBadge();
+  /* Sincronizar select con estado actual */
+  var sel = document.getElementById("sort-select");
+  if (sel && sel.value !== S.sortBy) sel.value = S.sortBy;
 }
 
 function renderGenderCol() {
@@ -3817,6 +3835,27 @@ function renderProdTable() {
                   (p.categoria||"").toLowerCase().includes(q.toLowerCase()) ||
                   (p.subcategoria||"").toLowerCase().includes(q.toLowerCase()));
   });
+  /* ── SORT ── */
+  var sortBy = S.sortBy || "marca";
+  if (sortBy === "az") {
+    filtered.sort(function(a,b){ return (a.producto||"").localeCompare(b.producto||"","es"); });
+  } else if (sortBy === "za") {
+    filtered.sort(function(a,b){ return (b.producto||"").localeCompare(a.producto||"","es"); });
+  } else if (sortBy === "precio_asc") {
+    filtered.sort(function(a,b){ return (a.precio||0)-(b.precio||0); });
+  } else if (sortBy === "precio_desc") {
+    filtered.sort(function(a,b){ return (b.precio||0)-(a.precio||0); });
+  } else if (sortBy === "mas_vendidos") {
+    var ventasMap = {};
+    S.sales.forEach(function(s){ (s.items||[]).forEach(function(it){ ventasMap[it.name]=(ventasMap[it.name]||0)+it.qty; }); });
+    filtered.sort(function(a,b){ return (ventasMap[b.producto]||0)-(ventasMap[a.producto]||0); });
+  } else if (sortBy === "ultimos") {
+    filtered.sort(function(a,b){ return (b.id||0)-(a.id||0); });
+  } else {
+    /* marca (default) */
+    filtered.sort(function(a,b){ return (a.subcategoria||"").localeCompare(b.subcategoria||"","es"); });
+  }
+
   var tbody = document.getElementById("prod-tbody");
   var empty = document.getElementById("prod-empty");
   if (!tbody) return;
@@ -4884,8 +4923,9 @@ function confirmReset() {
     '<p style="font-size:13px;color:var(--txt2);margin-bottom:16px;line-height:1.6;">Elegí qué querés limpiar:<br><span style="font-size:11px;color:var(--txt3);">Recomendamos hacer un backup primero (💾).</span></p>' +
     '<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:6px;">' +
 
-      '<button class="btn btn-surface w-full" style="text-align:left;padding:12px 14px;font-size:13px;border-left:3px solid var(--warn);" onclick="doResetSalesOnly()"><strong>Limpiar ventas y gastos</strong><br><span style=\'font-size:11px;color:var(--txt3);font-weight:400;\'>Mantiene los productos cargados.</span></button>' +
-      '<button class="btn btn-surface w-full" style="text-align:left;padding:12px 14px;font-size:13px;border-left:3px solid var(--err);" onclick="doFullReset()"><strong>Limpiar TODO</strong><br><span style=\'font-size:11px;color:var(--txt3);font-weight:400;\'>Borra ventas, gastos Y productos. Empezar de cero.</span></button>' +
+      '<button class="btn btn-surface w-full" style="text-align:left;padding:11px 12px;font-size:13px;border-left:3px solid var(--blue);white-space:normal;line-height:1.4;" onclick="doResetSalesHistoryOnly()">'+'<div style="font-weight:700;">🧾 Eliminar solo ventas</div>'+'<div style="font-size:11px;color:var(--txt3);margin-top:2px;">Solo historial de ventas. Productos e inventario intactos.</div>'+'</button>' +
+      '<button class="btn btn-surface w-full" style="text-align:left;padding:11px 12px;font-size:13px;border-left:3px solid var(--warn);white-space:normal;line-height:1.4;" onclick="doResetSalesOnly()">'+'<div style="font-weight:700;">🗑 Ventas y gastos</div>'+'<div style="font-size:11px;color:var(--txt3);margin-top:2px;">Borra ventas + gastos. Productos conservados.</div>'+'</button>' +
+      '<button class="btn btn-surface w-full" style="text-align:left;padding:11px 12px;font-size:13px;border-left:3px solid var(--err);white-space:normal;line-height:1.4;" onclick="doFullReset()">'+'<div style="font-weight:700;">⚠️ Limpiar TODO</div>'+'<div style="font-size:11px;color:var(--txt3);margin-top:2px;">Borra ventas, gastos y productos.</div>'+'</button>' +
     '</div>' +
     '<div class="modal-acts"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button></div>'
   );
@@ -4897,6 +4937,39 @@ function doFullReset() {
   S.sales = []; S.expenses = []; S.cart = [];
   save(); closeModal(); renderAll();
   toast("Sistema limpiado. Listo para trabajar 🚀", "ok");
+}
+
+function doResetSalesHistoryOnly() {
+  closeModal();
+  /* Modal de confirmación con doble advertencia */
+  openModal(
+    '<div class="modal-hdr"><span class="modal-ttl" style="color:var(--err);">🧾 Eliminar historial de ventas</span><button class="modal-cls" onclick="closeModal()">✕</button></div>' +
+    '<div style="background:var(--err-bg);border:1px solid var(--err-bd);border-radius:10px;padding:14px;margin-bottom:16px;">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--err);margin-bottom:6px;">⚠️ Esta acción no se puede deshacer</div>' +
+      '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">Toda la información de ventas será eliminada permanentemente.<br>' +
+      '<strong>Los productos e inventario NO serán modificados.</strong></div>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--txt3);margin-bottom:16px;">• Se eliminan: historial de ventas, estadísticas de ventas<br>• Se conservan: productos, categorías, inventario, configuración</div>' +
+    '<div class="modal-acts" style="gap:8px;">' +
+      '<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>' +
+      '<button class="btn btn-danger" onclick="confirmedResetSalesOnly()" style="background:var(--err);color:#fff;">Confirmar eliminación</button>' +
+    '</div>'
+  );
+}
+
+function confirmedResetSalesOnly() {
+  /* Backup preventivo en localStorage antes de borrar */
+  try {
+    var backup = { _date: new Date().toISOString(), _type: "sales_backup", sales: S.sales };
+    localStorage.setItem("ex2_sales_backup", JSON.stringify(backup));
+  } catch(e) { /* sin espacio = seguir igual */ }
+
+  S.sales = [];
+  S.cart  = [];
+  save();
+  closeModal();
+  renderAll();
+  toast("Historial de ventas eliminado. Productos conservados ✓", "ok");
 }
 
 function doResetSalesOnly() {
