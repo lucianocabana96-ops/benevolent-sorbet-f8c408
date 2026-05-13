@@ -2703,6 +2703,72 @@ select.inp { cursor: pointer; }
   #trash-modal .modal { border-radius: 24px; max-height: 80vh; }
 }
 
+/* ════════════════════════════════════
+   LOGIN — Formulario de autenticación
+════════════════════════════════════ */
+.login-form {
+  width: 100%; margin-top: 20px; display: flex;
+  flex-direction: column; gap: 14px;
+}
+.login-field {
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+}
+.login-lbl {
+  font-size: 12px; font-weight: 700; color: var(--txt3);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.login-inp {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--bd2); border-radius: var(--rs);
+  background: var(--bg); color: var(--txt);
+  font-size: 15px; font-family: 'Figtree', sans-serif;
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.login-inp:focus {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-bg);
+}
+.login-inp.error {
+  border-color: var(--err);
+  box-shadow: 0 0 0 3px var(--err-bg);
+}
+.login-pin-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.login-pin-wrap .login-inp {
+  padding-right: 44px; letter-spacing: 0.3em; font-size: 18px;
+}
+.login-eye {
+  position: absolute; right: 10px;
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: var(--txt3); padding: 4px;
+  line-height: 1; opacity: 0.7; transition: opacity 0.15s;
+}
+.login-eye:hover { opacity: 1; }
+.login-error {
+  background: var(--err-bg); border: 1px solid var(--err-bd);
+  border-radius: var(--rs); padding: 10px 14px;
+  font-size: 13px; font-weight: 600; color: var(--err);
+  text-align: center; animation: shake 0.3s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-6px); }
+  40%,80%  { transform: translateX(6px); }
+}
+
+/* ── Change PIN modal ── */
+#change-pin-modal {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#change-pin-modal .modal {
+  background: var(--bg2); border-radius: 20px;
+  box-shadow: var(--shl);
+}
+
 </style>
 </head>
 <body>
@@ -2723,9 +2789,34 @@ select.inp { cursor: pointer; }
         Sistema activo · v3.1
       </span>
     </div>
-    <button class="login-enter" onclick="doLogin()">Ingresar al sistema →</button>
+
+    <!-- FORMULARIO DE AUTH -->
+    <div class="login-form" id="login-form">
+      <div class="login-field">
+        <label class="login-lbl" for="login-user">Usuario</label>
+        <input class="login-inp" id="login-user" type="text"
+               placeholder="Ingresá tu usuario"
+               autocomplete="username" autocorrect="off"
+               autocapitalize="off" spellcheck="false"
+               onkeydown="if(event.key==='Enter')document.getElementById('login-pin').focus()">
+      </div>
+      <div class="login-field">
+        <label class="login-lbl" for="login-pin">PIN (4 dígitos)</label>
+        <div class="login-pin-wrap">
+          <input class="login-inp" id="login-pin" type="password"
+                 inputmode="numeric" maxlength="4" placeholder="••••"
+                 autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')doLogin()"
+                 oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <button class="login-eye" type="button" onclick="togglePin()" id="login-eye-btn" title="Mostrar PIN">👁</button>
+        </div>
+      </div>
+      <div class="login-error" id="login-error" style="display:none;"></div>
+      <button class="login-enter" onclick="doLogin()">Ingresar al sistema →</button>
+    </div>
+
     <p class="login-footer">Moda · Gestión · Control</p>
-  </div>
+  </div></div>
 </div>
 
 <!-- APP -->
@@ -3080,6 +3171,56 @@ function subscribeRealtime() {
   }
 }
 
+
+/* ══════════════════════════════════════
+   AUTH — Sistema de usuarios
+   Para agregar usuarios: agregar objeto al array USERS
+══════════════════════════════════════ */
+var USERS = [
+  { user: "admin",    pin: "1234", nombre: "Administrador" },
+  { user: "extasis",  pin: "0000", nombre: "Extasis"       },
+  /* agregar más aquí: { user: "nombre", pin: "####", nombre: "Nombre" } */
+];
+var SESSION_KEY = "ex2_auth_session";
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); }
+  catch(e) { return null; }
+}
+function setSession(userData) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+}
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+function togglePin() {
+  var inp = document.getElementById("login-pin");
+  var btn = document.getElementById("login-eye-btn");
+  if (!inp) return;
+  if (inp.type === "password") {
+    inp.type = "text"; btn.textContent = "🙈";
+  } else {
+    inp.type = "password"; btn.textContent = "👁";
+  }
+}
+
+function showLoginError(msg) {
+  var el = document.getElementById("login-error");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = "block";
+  /* Shake en inputs */
+  ["login-user","login-pin"].forEach(function(id) {
+    var inp = document.getElementById(id);
+    if (inp) { inp.classList.add("error"); setTimeout(function(){ inp.classList.remove("error"); }, 600); }
+  });
+}
+function clearLoginError() {
+  var el = document.getElementById("login-error");
+  if (el) el.style.display = "none";
+}
+
 const DISCOUNT = 0.20;
 const ALL_TABS = ["dashboard","ventas","productos","inventario","caja","reportes"];
 
@@ -3263,12 +3404,37 @@ function cartCalc() {
    LOGIN & DARK MODE
 ══════════════════════════════════════ */
 function doLogin() {
-  const sc = document.getElementById("login-screen");
+  clearLoginError();
+  var userVal = (document.getElementById("login-user")||{}).value||"";
+  var pinVal  = (document.getElementById("login-pin")||{}).value||"";
+
+  /* Validaciones */
+  if (!userVal.trim()) { showLoginError("⚠️ Ingresá tu usuario."); document.getElementById("login-user").focus(); return; }
+  if (!pinVal)          { showLoginError("⚠️ Ingresá tu PIN."); document.getElementById("login-pin").focus(); return; }
+  if (pinVal.length < 4){ showLoginError("⚠️ El PIN debe tener 4 dígitos."); document.getElementById("login-pin").focus(); return; }
+
+  /* Autenticación */
+  var found = USERS.find(function(u) {
+    return u.user.toLowerCase() === userVal.trim().toLowerCase() && u.pin === pinVal;
+  });
+
+  if (!found) {
+    showLoginError("❌ Usuario o PIN incorrecto.");
+    document.getElementById("login-pin").value = "";
+    document.getElementById("login-pin").focus();
+    return;
+  }
+
+  /* Sesión válida */
+  setSession({ user: found.user, nombre: found.nombre, loginAt: Date.now() });
+
+  /* Animación de entrada */
+  var sc = document.getElementById("login-screen");
   sc.style.transition = "opacity 0.4s, transform 0.4s";
   sc.style.opacity = "0"; sc.style.transform = "scale(0.97)";
-  setTimeout(() => {
+  setTimeout(function() {
     sc.classList.add("hidden");
-    const app = document.getElementById("app");
+    var app = document.getElementById("app");
     app.classList.remove("hidden");
     app.style.animation = "fadeIn 0.35s ease";
     initApp();
@@ -3277,11 +3443,21 @@ function doLogin() {
 
 /* ── CERRAR SESIÓN ── */
 function doLogout() {
-  if (!confirm("¿Salir del sistema?")) return;
-  const app = document.getElementById("app");
-  const ls  = document.getElementById("login-screen");
+  if (!confirm("¿Cerrar sesión?")) return;
+  clearSession();
+  /* Limpiar inputs */
+  var u = document.getElementById("login-user");
+  var p = document.getElementById("login-pin");
+  if (u) u.value = "";
+  if (p) { p.value = ""; p.type = "password"; }
+  clearLoginError();
+  var btn = document.getElementById("login-eye-btn");
+  if (btn) btn.textContent = "👁";
+
+  var app = document.getElementById("app");
+  var ls  = document.getElementById("login-screen");
   app.classList.add("hidden");
-  ls.style.opacity  = "0";
+  ls.style.opacity = "0";
   ls.style.transform = "scale(0.97)";
   ls.classList.remove("hidden");
   setTimeout(function() {
@@ -4826,13 +5002,29 @@ function initApp() {
     new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
   var t = document.getElementById("dark-toggle");
   if (t) t.checked = S.dark;
+  /* Mostrar nombre del usuario logueado */
+  var session = getSession();
+  var unEl = document.getElementById("hdr-username");
+  if (unEl && session) unEl.textContent = "👤 " + (session.nombre || session.user);
   renderAll();
   renderPayGrid();
-  // Iniciar Supabase después del render inicial
   setTimeout(initSupabase, 500);
 }
 
 applyDark();
+
+/* ── Auto-login si hay sesión activa ── */
+(function() {
+  var session = getSession();
+  if (session && session.user) {
+    document.addEventListener('DOMContentLoaded', function() {
+      var sc = document.getElementById("login-screen");
+      var app = document.getElementById("app");
+      if (sc) sc.classList.add("hidden");
+      if (app) { app.classList.remove("hidden"); initApp(); }
+    });
+  }
+})();
 
 /* ══════════════════════════════════════
    BACKUP / RESTORE / RESET
@@ -5174,6 +5366,58 @@ function exportCatalogoPDF() {
   toast("Catálogo listo — tocá Imprimir / Guardar PDF", "ok");
   setTimeout(function(){ window.print(); }, 500);
 }
+
+/* ══════════════════════════════════════
+   CAMBIAR PIN
+══════════════════════════════════════ */
+function openChangePinModal() {
+  /* Limpiar campos */
+  ["cp-current","cp-new","cp-confirm"].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  var err = document.getElementById("cp-error");
+  if (err) err.style.display = "none";
+  document.getElementById("change-pin-modal").style.display = "flex";
+  setTimeout(function(){ var el = document.getElementById("cp-current"); if(el) el.focus(); }, 100);
+}
+
+function closeChangePinModal() {
+  document.getElementById("change-pin-modal").style.display = "none";
+}
+
+function doChangePin() {
+  var current  = (document.getElementById("cp-current")||{}).value||"";
+  var newPin   = (document.getElementById("cp-new")||{}).value||"";
+  var confirm  = (document.getElementById("cp-confirm")||{}).value||"";
+  var errEl    = document.getElementById("cp-error");
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = "block";
+  }
+  errEl.style.display = "none";
+
+  /* Validaciones */
+  if (!current)           { showErr("⚠️ Ingresá tu PIN actual."); document.getElementById("cp-current").focus(); return; }
+  if (current.length < 4) { showErr("⚠️ El PIN actual debe tener 4 dígitos."); return; }
+  if (!newPin)            { showErr("⚠️ Ingresá el PIN nuevo."); document.getElementById("cp-new").focus(); return; }
+  if (newPin.length < 4)  { showErr("⚠️ El PIN nuevo debe tener 4 dígitos."); return; }
+  if (newPin !== confirm)  { showErr("⚠️ Los PINs no coinciden."); document.getElementById("cp-confirm").focus(); return; }
+  if (newPin === current)  { showErr("⚠️ El PIN nuevo debe ser diferente al actual."); return; }
+
+  /* Verificar PIN actual */
+  var session = getSession();
+  var userObj = USERS.find(function(u){ return u.user === (session && session.user); });
+  if (!userObj) { showErr("❌ Sesión inválida. Volvé a iniciar sesión."); return; }
+  if (userObj.pin !== current) { showErr("❌ PIN actual incorrecto."); document.getElementById("cp-current").value=""; document.getElementById("cp-current").focus(); return; }
+
+  /* Actualizar PIN */
+  userObj.pin = newPin;
+  closeChangePinModal();
+  toast("✓ PIN actualizado correctamente", "ok");
+}
+
 </script>
 <!-- ══ Fixed Action Bar — Siempre visible en mobile (Problema 3 fix) ══ -->
 <!-- Se muestra via CSS solo en ≤680px, encima de la bottom-nav -->
@@ -5264,6 +5508,46 @@ function exportCatalogoPDF() {
         Los productos eliminados se conservan <strong>60 días</strong>. Podés restaurarlos en cualquier momento.
       </div>
       <div id="trash-list"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL CAMBIAR PIN -->
+<div id="change-pin-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeChangePinModal()">
+  <div class="modal" style="max-width:360px;width:92%;padding:0;">
+    <div class="modal-header">
+      <span class="modal-title">🔑 Cambiar PIN</span>
+      <button class="modal-close" onclick="closeChangePinModal()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div class="login-field" style="margin-bottom:14px;">
+        <label class="login-lbl" for="cp-current">PIN actual</label>
+        <input class="login-inp" id="cp-current" type="password"
+               inputmode="numeric" maxlength="4" placeholder="••••"
+               autocomplete="current-password"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="login-field" style="margin-bottom:14px;">
+        <label class="login-lbl" for="cp-new">PIN nuevo (4 dígitos)</label>
+        <input class="login-inp" id="cp-new" type="password"
+               inputmode="numeric" maxlength="4" placeholder="••••"
+               autocomplete="new-password"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="login-field" style="margin-bottom:18px;">
+        <label class="login-lbl" for="cp-confirm">Confirmar PIN nuevo</label>
+        <input class="login-inp" id="cp-confirm" type="password"
+               inputmode="numeric" maxlength="4" placeholder="••••"
+               autocomplete="new-password"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+               onkeydown="if(event.key==='Enter')doChangePin()">
+      </div>
+      <div class="login-error" id="cp-error" style="display:none;margin-bottom:14px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeChangePinModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="doChangePin()">Guardar PIN</button>
+      </div>
     </div>
   </div>
 </div>
